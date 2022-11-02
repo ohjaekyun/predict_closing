@@ -1,0 +1,79 @@
+**재무데이터 활용 최종등급 예측 모델링**
+
+
+1.   라이브러리 및 데이터 불러오기
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score 
+
+df=pd.read_csv('/content/sampling.csv',sep=",")
+
+2.   데이터 EDA 및 전처리
+
+#데이터 구조 확인
+df.head()
+df.shape
+
+# 문자형-> 숫자형 변환 
+df1['재무등급']=df['재무등급'].map({'D':0,'CCC':1,'CC':2,'C':3,'B':4,'BB':5,'BBB':6,'A':7,'AA':8,'AAA':9})
+df1['최종등급']=df['최종등급'].map({'D':0,'CCC':1,'CC':2,'C':3,'B':4,'BB':5,'BBB':6,'A':7,'AA':8,'AAA':9})
+df1['업종']=df['업종'].map({'M':11,'O':22,'V':33,'S':44,'B':55,'A':66})
+
+# 결측치 제거 
+df1=df1.dropna()
+# 결측 제거 후 확인 
+df1.isna().sum()
+
+3.   모델링
+
+# features/target, train/test dataset 분리
+# 사업자번호의 경우 최종등급의 영향이 크지 않을것으로 예측되어 제외
+X = df1[['모형','업종','형태','산업코드','총자산','대표자CB등급','총점','재무등급']]
+y = df1[['최종등급']]
+
+train_x, test_x, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42) 
+
+## 데이터 스케일링
+# 데이터 스케일링 작업을 통해, 모든 특성의 범위(또는 분포)를 같게 만들어줘야합니다.
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+train_x = scaler.fit_transform(train_x)
+test_x = scaler.transform(test_x)
+
+## 랜덤포레스트 모델 생성 및 평가 
+model_rf = RandomForestClassifier(n_estimators=20, max_depth=5,random_state=0)
+model_rf.fit(train_x,train_y)
+
+# SCORE 산출
+predict1 = model_rf.predict(test_x)
+print(accuracy_score(test_y,predict1))
+# 중요도
+print("변수 중요도 : \n{}".format(model_rf.feature_importances_))
+
+## 로지스틱 모델 생성 및 평가 
+model_lg = LogisticRegression()
+model_lg.fit(train_x, train_y)
+
+# SCORE 산출
+predict2 = model_lg.predict(test_x)
+print(accuracy_score(test_y,predict2))
+
+4.   제출파일 생성
+
+predict1 = model.predict(test_x)
+
+#제출용 파일 infile
+submission=pd.read_csv('/content/submission.csv')
+submission
+
+submission['최종등급']=predict1
+submission
+
+submission.to_csv('결과물제출.csv')
