@@ -12,6 +12,9 @@ import base64
 from datetime import date
 
 
+with open('text_keywords.txt', 'r') as f:
+    keywords = f.read().split('\n')
+
 with open('data/secrets.json') as f:
     dict_api = json.load(f)
 dict_naver = dict_api['naver']
@@ -24,12 +27,20 @@ ad_secret_key = dict_naver_ad['SECRET_KEY']
 
 url = 'https://openapi.naver.com/v1/datalab/search'
 
-def get_naver_trend_analysis(start_date, end_date, keyword_name, keywords):
-    keywords_string = '","'.join(keywords)
-    keywords_string = ''.join(['["', keywords_string, '"]'])
-    body = f"""{{"startDate":"{start_date}","endDate":"{end_date}","timeUnit":"month","keywordGroups":[{{"groupName":"{keyword_name}","keywords":{keywords_string}}}]}}"""
-    #    "keywordGroups":[{"groupName":"한글","keywords":["한글","korean"]},
-    #    {"groupName":"영어","keywords":["영어","english"]}]
+def get_naver_trend_analysis(start_date, end_date, keywords):
+    num_keywords = len(keywords)
+    #keywords_string = '","'.join(keywords)
+    #keywords_string = ''.join(['["', keywords_string, '"]'])
+    body = f'{{"startDate":"{start_date}","endDate":"{end_date}","timeUnit":"month",'
+    keyword_bodies = [body, '"keywordGroups":[']
+    for keyword in keywords:
+        keyword_body = f'{{"groupName":"{keyword}","keywords":["{keyword}"]}}' 
+        keyword_bodies.append(keyword_body)
+        keyword_bodies.append(',')
+    keyword_bodies.pop()
+    keyword_bodies.append(']}')
+    body = ''.join(keyword_bodies)
+    print(body)
     request = urllib.request.Request(url)
     request.add_header("X-Naver-Client-Id", client_id)
     request.add_header("X-Naver-Client-Secret", client_secret)
@@ -41,7 +52,7 @@ def get_naver_trend_analysis(start_date, end_date, keyword_name, keywords):
         print('Error Code: ', rescode)
         return None
     response_body = response.read().decode('utf-8')
-    return json.loads(response_body)['results'][0]
+    return json.loads(response_body)['results']
 
 
 def get_naver_ad_searches(keyword):
@@ -78,11 +89,11 @@ def get_naver_ad_searches(keyword):
     response_body = response.json()
     return list(response_body.values())[0]
 
-get_naver_ad_searches('에잇퍼센트')
-keywords = ['에잇퍼센트']
+
+results = get_naver_trend_analysis('2014-01-01', str(date.today()), 'eight_percent', keywords)
+
 dict_ad_searches = get_naver_ad_searches(keywords[0])
 searches_count = dict_ad_searches[0]['monthlyMobileQcCnt'] + dict_ad_searches[0]['monthlyPcQcCnt']
-results = get_naver_trend_analysis('2016-01-01', str(date.today()), 'eight_percent', keywords)
 data_df = pd.DataFrame.from_dict(results['data'])
 data_df['keywords'] = ",".join(keywords)
 recent_search_ratio = list(data_df['ratio'])[-1]

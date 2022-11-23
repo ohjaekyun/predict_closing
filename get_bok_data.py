@@ -44,6 +44,42 @@ def get_date(data_time, period):
         return None
     
 
+def get_year_and_month(data_time, period):
+    year = int(data_time[:4])
+    if period == 'M':
+        month = int(data_time[4:6])
+        return year, month
+
+    elif period == 'Q':
+        quater = int(data_time[5])
+        if quater == 1:
+            return year, 3
+        elif quater == 2:
+            return year, 6
+        elif quater == 3:
+            return year, 9
+        else:
+            return year, 12
+
+    elif period == 'A':
+        return year, 12
+
+    elif period == 'S':
+        half = int(data_time[5])
+        if half == 2:
+            return year, 6
+        else:
+            return year, 12
+
+    elif period == 'D':
+        month = int(data_time[4:6])
+        day = int(data_time[6:8])
+        return year, month
+
+    else:
+        return None
+
+
 with open('data/bok_api_key.txt', 'r') as f:
     bok_key = f.read()
 
@@ -72,40 +108,27 @@ periods_list = ['M', 'M', 'M', 'M', 'M',
                 'M', 'M', 'M', 'M', 'M',
                 'M', 'M']
 
-### 호출하려는 OpenAPI URL를 정의합니다.
-#url_get_code_name = f'https://ecos.bok.or.kr/api/StatisticTableList/{bok_key}/json/en/1/20000'
-##url = f'https://ecos.bok.or.kr/api/KeyStatisticList/{bok_key}/json/en/1/100'
-#response = requests.get(url_get_code_name)
-### http 요청이 성공했을때 API의 리턴값을 가져옵니다.
-#if response.status_code != 200: 
-#    print('Error code:  ', response.status_code)
-#data_rows = response.json()['StatisticTableList']['row']
-#for row in data_rows:
-#    stat_code = row['STAT_CODE']
-#    if stat_code not in code_names and row['CYCLE'] is not None:
-#        code_names.append(row['STAT_CODE'])
-#        periods_list.append(row['CYCLE'])
-
 names_for_check = ['STAT_NAME', 'ITEM_NAME1', 'ITEM_NAME2', 'ITEM_NAME3', 'ITEM_NAME4']
 code_names_for_check = ['STAT_CODE', 'ITEM_CODE1', 'ITEM_CODE2', 'ITEM_CODE3', 'ITEM_CODE4']
 saved_code_names = []
+base_year = 2006
 df_dict = {}
 for code, period in zip(code_names, periods_list):
     if period == 'M':
-        start = '200001'
-        end = '202210'
+        start = f'{base_year}01'
+        end = '202209'
     elif period == 'Q':
-        start = '2000Q1'
+        start = f'{base_year}Q1'
         end = '2022Q3'
     elif period == 'A':
-        start = '2000'
+        start = f'{base_year}'
         end = '2022'
     elif period == 'S':
-        start = '2000S1'
+        start = f'{base_year}S1'
         end = '2022S2'
     elif period == 'D':
-        start = '20000101'
-        end = '20221101'
+        start = f'{base_year}0101'
+        end = '20220930'
     else:
         continue
     url = f'https://ecos.bok.or.kr/api/StatisticSearch/{bok_key}/json/en/1/50000/{code}/{period}/{start}/{end}/'
@@ -138,17 +161,69 @@ for code, period in zip(code_names, periods_list):
             columns = list(df.columns)
         else:
             saved_code_names.append(full_code_name)
-            columns = ['data_name', 'date', 'value']
+            columns = ['year', 'month', 'data_name', 'value']
             df = pd.DataFrame(columns=columns)
         row = pd.DataFrame(np.zeros([1, len(columns)]), columns=columns)
         row['data_name'] = data_name
-        row['date'] = get_date(data_time, period)
+        year, month = get_year_and_month(data_time, period)
+        if period == 'Q':
+            row['year'] = year
+            row['month'] = month - 2
+            row['value'] = data_value
+            df = pd.concat([df, row], ignore_index=True)
+            row['year'] = year
+            row['month'] = month - 1
+            row['value'] = data_value
+            df = pd.concat([df, row], ignore_index=True)
+        row['year'] = year
+        row['month'] = month
         row['value'] = data_value
         df = pd.concat([df, row], ignore_index=True)
         df_dict[full_code_name] = df
-date0 = date(2022, 9, 30)
-date1 = date(2022, 6, 30)
+year1 = base_year
+month1 = 1
+year2 = 2022
+month2 = 6
+month3 = 9
+valid_dataframes = []
+idx = 0
 for code_name, df in df_dict.items():
-    list_dates = list(df.date)
-    if (date0 in list_dates) or (date1 in list_dates):
-        df.to_csv(f'data/bok/economy_data_{code_name}.csv')
+    df0 = df[df['year'] == year1]
+    df1 = df0[df0['month'] == month1]
+    df00 = df[df['year'] == year2]
+    df2 = df00[df00['month'] == month2]
+    df3 = df00[df00['month'] == month3]
+    if len(df1) > 0 and len(df3) > 0:
+        data_name = df['data_name'].iloc[-1]
+        data_name = data_name[data_name.find(' ') + 1:]
+        df = df.drop(columns=['data_name'])
+        df = df.rename(columns={'value': data_name}, inplace=False)
+        if idx == 0:
+            if len(df3) == 0:
+                df7 = df00[df00['month'] == 7]
+                if len(df7) == 0:
+                    row1 = pd.DataFrame([year2, 7, np.nan], columns=df.columns)
+                    df = pd.concat([df, row1], ignore_index=True)
+                df8 = df00[df00['month'] == 8]
+                if len(df8) == 0:
+                    row1 = pd.DataFrame([year2, 8, np.nan], columns=df.columns)
+                    df = pd.concat([df, row1], ignore_index=True)
+                row1 = pd.DataFrame([year2, 9, np.nan], columns=df.columns)
+                df = pd.concat([df, row1], ignore_index=True)
+            idx = 1
+        else:
+            df = df.drop(columns=['year', 'month'])
+            if len(df3) == 0:
+                df7 = df00[df00['month'] == 7]
+                if len(df7) == 0:
+                    row1 = pd.DataFrame([np.nan], columns=df.columns)
+                    df = pd.concat([df, row1], ignore_index=True)
+                df8 = df00[df00['month'] == 8]
+                if len(df8) == 0:
+                    row1 = pd.DataFrame([np.nan], columns=df.columns)
+                    df = pd.concat([df, row1], ignore_index=True)
+                row1 = pd.DataFrame([np.nan], columns=df.columns)
+                df = pd.concat([df, row1], ignore_index=True)
+        valid_dataframes.append(df)
+valid_df = pd.concat(valid_dataframes, axis=1)
+valid_df.to_csv(f'data/total_economy_data.csv')
