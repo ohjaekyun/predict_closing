@@ -49,10 +49,10 @@ with open('data/bok_api_key.txt', 'r') as f:
 
 code_names = ['101Y004', '101Y015', '101Y008', '111Y004', '111Y006', 
               '112Y002', '104Y014', '111Y008', '104Y016', '111Y009', 
-              '141Y005', '151Y001', '151Y004', '131Y016', '104Y017',
+              '141Y005', '151Y002', '131Y016', '104Y017',
               '722Y001', '721Y001', '121Y002', '121Y006', '121Y004',
               '121Y007', '901Y014', '901Y055', '901Y015', '191Y001',
-              '901Y013', '200Y001', '200Y002', '301Y013', '301Y017',
+              '901Y013', '200Y002', '301Y013', '301Y017',
               '731Y004', '731Y005', '901Y011', '901Y012', '303Y002',
               '303Y005', '403Y001', '403Y003', '403Y005', '901Y060',
               '732Y001', '402Y014', '401Y015', '901Y062', '511Y002',
@@ -61,10 +61,10 @@ code_names = ['101Y004', '101Y015', '101Y008', '111Y004', '111Y006',
               '902Y021', '902Y002']
 periods_list = ['M', 'M', 'M', 'M', 'M', 
                 'M', 'M', 'M', 'M', 'M', 
-                'M', 'Q', 'Q', 'Q', 'M',
+                'M', 'M', 'Q', 'M',
                 'M', 'M', 'M', 'M', 'M',
                 'M', 'M', 'M', 'M', 'M',
-                'M', 'A', 'Q', 'M', 'M',
+                'M', 'Q', 'M', 'M',
                 'M', 'M', 'M', 'M', 'M',
                 'M', 'M', 'M', 'M', 'M',
                 'M', 'M', 'M', 'M', 'M',
@@ -89,6 +89,7 @@ periods_list = ['M', 'M', 'M', 'M', 'M',
 names_for_check = ['STAT_NAME', 'ITEM_NAME1', 'ITEM_NAME2', 'ITEM_NAME3', 'ITEM_NAME4']
 code_names_for_check = ['STAT_CODE', 'ITEM_CODE1', 'ITEM_CODE2', 'ITEM_CODE3', 'ITEM_CODE4']
 saved_code_names = []
+df_dict = {}
 for code, period in zip(code_names, periods_list):
     if period == 'M':
         start = '200001'
@@ -132,8 +133,8 @@ for code, period in zip(code_names, periods_list):
             if data_for_code is not None:
                 curr_codes.append(data_for_code)
         full_code_name = '_'.join(curr_codes)
-        if full_code_name in saved_code_names:
-            df = pd.read_csv(f'data/bok/economy_data_{full_code_name}.csv', index_col=0)
+        if full_code_name in df_dict:
+            df = df_dict[full_code_name]
             columns = list(df.columns)
         else:
             saved_code_names.append(full_code_name)
@@ -144,4 +145,10 @@ for code, period in zip(code_names, periods_list):
         row['date'] = get_date(data_time, period)
         row['value'] = data_value
         df = pd.concat([df, row], ignore_index=True)
-        df.to_csv(f'data/bok/economy_data_{full_code_name}.csv')
+        df_dict[full_code_name] = df
+date0 = date(2022, 9, 30)
+date1 = date(2022, 6, 30)
+for code_name, df in df_dict.items():
+    list_dates = list(df.date)
+    if (date0 in list_dates) or (date1 in list_dates):
+        df.to_csv(f'data/bok/economy_data_{code_name}.csv')
