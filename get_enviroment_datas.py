@@ -82,5 +82,5 @@ for data1, data2, data3 in zip(train_train_loader1, train_train_loader2, train_t
     output3 = model.vae_encoder3(curr_data1[0])[0]
     output = torch.vstack([output1, output2, output3], axis=2)
     #loss = criterion(output[2], output[3], output[0], curr_data[1])
-    result = model.loss_function([curr_data1[1].clone(), curr_data2[1].clone(), curr_data3[1].clone()], *output, **{'M_N': 0.5})
+    result = model.loss_function([curr_data1[1].clone(), curr_data2[1].clone(), curr_data3[1].clone()], *output, **{'M_N': 1})
 

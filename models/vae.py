@@ -157,7 +157,7 @@ class VanillaVAEDecoder(nn.Module):
         :return: (Tensor) [B x C x H x W]
         """
         result = self.decoder_input(z)
-        result = self.batch_norm(result)
+        # result = self.batch_norm(result)
         #result = result.view(-1, 64, 2, 2)
         result = self.decoder(result)
         result = self.final_layer(result)
